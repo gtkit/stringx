@@ -1,7 +1,9 @@
 package stringx
 
 import (
+	"strconv"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -95,22 +97,22 @@ func FirstUpperCase(input string) string {
 
 // IsEmpty 判断字符串是否为空.
 func IsEmpty(str string) bool {
-	return len(str) == 0
+	return str == ""
 }
 
 // IsNotEmpty 判断字符串是否不为空.
 func IsNotEmpty(str string) bool {
-	return len(str) > 0
+	return str != ""
 }
 
 // IsBlank 判断字符串是否为空白.
 func IsBlank(str string) bool {
-	return len(strings.TrimSpace(str)) == 0
+	return strings.TrimSpace(str) == ""
 }
 
 // IsNotBlank 判断字符串是否不为空白.
 func IsNotBlank(str string) bool {
-	return len(strings.TrimSpace(str)) > 0
+	return strings.TrimSpace(str) != ""
 }
 
 // IsAllBlank 判断字符串是否全部为空白.
@@ -131,4 +133,31 @@ func IsAllNotBlank(strs ...string) bool {
 		}
 	}
 	return true
+}
+
+// MillTime 获取当前时间戳(毫秒)字符串.
+func MillTime() string {
+	milltime := time.Now().UnixMilli()
+	return strconv.FormatInt(milltime, 10)
+}
+
+// UnixTime 获取当前时间戳(秒)字符串.
+func UnixTime() string {
+	return strconv.Itoa(int(time.Now().Unix()))
+}
+
+// Ternary 工具, 类似于 PHP 的三元运算符.
+/**
+ * Example:
+ 	func main() {
+	  fmt.Println(Ter(true, 1, 2)) // 1
+	  fmt.Println(Ter(false, 1, 2)) // 2
+	}.
+*/
+func Ternary[T any](cond bool, a, b T) T {
+	if cond {
+		return a
+	}
+
+	return b
 }
