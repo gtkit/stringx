@@ -166,7 +166,7 @@ func Ternary[T any](cond bool, a, b T) T {
 	return b
 }
 
-// RandomString 生成长度为 length 的随机字符串
+// RandomString 生成长度为 length 的随机字符串.
 func RandomString(length int) string {
 	letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -177,7 +177,7 @@ func RandomString(length int) string {
 	return string(b)
 }
 
-// SecRandomString 生成长度为 length 的安全随机字符串
+// SecRandomString 生成长度为 length 的安全随机字符串.
 func SecRandomString(length int) (string, error) {
 	b := make([]byte, length)
 	_, err := rand.Read(b)
@@ -189,7 +189,7 @@ func SecRandomString(length int) (string, error) {
 	return base64.URLEncoding.EncodeToString(b)[:length], nil
 }
 
-// RandomNumber 生成长度为 length 随机数字字符串
+// RandomNumber 生成长度为 length 随机数字字符串.
 func RandomNumber(length int) string {
 	table := [...]byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
 	b := make([]byte, length)
