@@ -77,6 +77,8 @@ func IsNotBlank(str string) bool
 // IsAllNotBlank 判断字符串是否全部不为空白.
 func IsAllNotBlank(strs ...string) bool
 
+// Substr 截取字符串.
+func Substr(s string, start, length int) string 
 
 ```
 
