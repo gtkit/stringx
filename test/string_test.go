@@ -117,3 +117,10 @@ func SecureRandomString(length int) (string, error) {
 	// 调整b的长度，因为base64编码会增加输出长度。
 	return base64.URLEncoding.EncodeToString(b)[:length], nil
 }
+
+func TestSlug(t *testing.T) {
+	str := "This is a test string!"
+
+	slug := stringx.Slug(str, "_")
+	t.Log("slug:", slug)
+}

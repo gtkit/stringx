@@ -221,3 +221,8 @@ func Substr(s string, start, length int) string {
 
 	return string(bt[start:end])
 }
+
+// Slug 空格转换为指定分隔符.
+func Slug(str, separator string) string {
+	return strings.ReplaceAll(str, " ", separator)
+}
