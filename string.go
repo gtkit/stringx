@@ -27,11 +27,36 @@ func CamelToSnake(camelCase string) string {
 	}
 	return result.String()
 }
+func CamelToUpperSnake(camelCase string) string {
+	if len(camelCase) == 0 {
+		return ""
+	}
+	var result strings.Builder
+	for i, c := range camelCase {
+		if unicode.IsUpper(c) && i > 0 {
+			result.WriteByte('_')
+		}
+		result.WriteRune(unicode.ToUpper(c))
+	}
+	return result.String()
+}
 
-// SnakeToCamel 蛇形命名转成驼峰命名，如果不是蛇形命名，则转成对应小写字符串
+// SnakeToCamel 蛇形命名转成驼峰命名.
+// firstUpper 是否首字母大写，默认为true, 转为大驼峰命名.
+func SnakeToCamel(snakeCase string, firstUpper ...bool) string {
+	if len(snakeCase) == 0 {
+		return ""
+	}
+	if len(firstUpper) == 0 || firstUpper[0] {
+		return SnakeToGreatCamel(snakeCase)
+	}
+	return SnakeToSmallCamel(snakeCase)
+}
+
+// SnakeToGreatCamel 蛇形命名转成驼峰命名，如果不是蛇形命名，则转成对应首字母大写字符串
 // user_agent → UserAgent
-// user → user.
-func SnakeToCamel(snakeCase string) string {
+// user → User.
+func SnakeToGreatCamel(snakeCase string) string {
 	if len(snakeCase) == 0 {
 		return ""
 	}
@@ -53,9 +78,35 @@ func SnakeToCamel(snakeCase string) string {
 	return result.String()
 }
 
+// SnakeToSmallCamel 将蛇形命名转成小驼峰命名，如果不是蛇形命名，则转成对应小写字符串
+// user_agent → userAgent.
+// user → user.
+func SnakeToSmallCamel(snakeCase string) string {
+	if len(snakeCase) == 0 {
+		return ""
+	}
+	var (
+		result strings.Builder
+		num    int
+	)
+	for i, c := range snakeCase {
+		if c == '_' {
+			num = i + 1
+			continue
+		}
+
+		if i == num && num > 0 {
+			result.WriteRune(unicode.ToUpper(c))
+		} else {
+			result.WriteRune(unicode.ToLower(c))
+		}
+	}
+	return result.String()
+}
+
 // LowerFirstCase 将字符串的第一个字母转换为小写
 // UserAgent → userAgent.
-func LowerFirstCase(input string) string {
+func LowerFirst(input string) string {
 	if len(input) == 0 {
 		return ""
 	}
@@ -65,12 +116,32 @@ func LowerFirstCase(input string) string {
 
 // UpperFirstCase 将首字母转换为大写
 // user → User.
-func UpperFirstCase(input string) string {
+func UpperFirst(input string) string {
 	if len(input) == 0 {
 		return input
 	}
 
 	return strings.ToUpper(string(input[0])) + input[1:]
+}
+
+// Ufirst 首字母大写.
+func Ufirst(s string) string {
+	r := []rune(s)
+	if len(s) > 0 && unicode.IsLetter(r[0]) && unicode.IsLower(r[0]) {
+		r[0] -= 'a' - 'A'
+		return string(r)
+	}
+	return s
+}
+
+// Lfirst 首字母小写.
+func Lfirst(s string) string {
+	r := []rune(s)
+	if len(s) > 0 && unicode.IsLetter(r[0]) && unicode.IsUpper(r[0]) {
+		r[0] += 'a' - 'A'
+		return string(r)
+	}
+	return s
 }
 
 // FirstLowerCase 获取字符串的首字母小写.
@@ -204,25 +275,99 @@ func RandomNumber(length int) string {
 }
 
 // Substr 截取字符串.
-func Substr(s string, start, length int) string {
-	bt := []rune(s)
+func Substr(s string, start int, strlength ...int) string {
+	charlist := []rune(s)
+	l := len(charlist)
+	length := 0
+	end := 0
+
+	if len(strlength) == 0 {
+		length = l
+	} else {
+		length = strlength[0]
+	}
+
+	if start < 0 {
+		start = l + start
+	}
+	end = start + length
+
+	if start > end {
+		start, end = end, start
+	}
+
 	if start < 0 {
 		start = 0
 	}
-	if start > len(bt) {
-		start = start % len(bt)
-	}
-	var end int
-	if (start + length) > (len(bt) - 1) {
-		end = len(bt)
-	} else {
-		end = start + length
+
+	if start > l {
+		start = l
 	}
 
-	return string(bt[start:end])
+	if end < 0 {
+		end = 0
+	}
+
+	if end > l {
+		end = l
+	}
+
+	return string(charlist[start:end])
+
 }
 
 // Slug 空格转换为指定分隔符.
 func Slug(str, separator string) string {
 	return strings.ReplaceAll(str, " ", separator)
+}
+
+// SubByte 截取指定长度的字节.
+func SubByte(str string, length int) string {
+	bs := []byte(str)[:length]
+	bl := 0
+	for i := len(bs) - 1; i >= 0; i-- {
+		switch {
+		case bs[i] >= 0 && bs[i] <= 127:
+			return string(bs[:i+1])
+		case bs[i] >= 128 && bs[i] <= 191:
+			bl++
+		case bs[i] >= 192 && bs[i] <= 253:
+			cl := 0
+			switch {
+			case bs[i]&252 == 252:
+				cl = 6
+			case bs[i]&248 == 248:
+				cl = 5
+			case bs[i]&240 == 240:
+				cl = 4
+			case bs[i]&224 == 224:
+				cl = 3
+			default:
+				cl = 2
+			}
+			if bl+1 == cl {
+				return string(bs[:i+cl])
+			}
+			return string(bs[:i])
+		}
+	}
+	return ""
+}
+
+// Char returns a char slice
+func Char(str string) []string {
+	c := make([]string, 0)
+	for _, v := range str {
+		c = append(c, string(v))
+	}
+	return c
+}
+
+// Escape 转义字符串.
+func Escape(s string) string {
+	str := strconv.Quote(s)
+	str = strings.Replace(str, "'", "\\'", -1)
+	strlist := []rune(str)
+	l := len(strlist)
+	return Substr(str, 1, l-2)
 }

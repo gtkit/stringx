@@ -44,13 +44,19 @@ func CamelToSnake(camelCase string) string
 // user → user.
 func SnakeToCamel(snakeCase string) string
 
-// LowerFirstCase 将字符串的第一个字母转换为小写
+// LowerFirst 将字符串的第一个字母转换为小写
 // UserAgent → userAgent.
-func LowerFirstCase(input string) string
+func LowerFirst(input string) string
 
-// UpperFirstCase 将首字母转换为大写
+// UpperFirst 将首字母转换为大写
 // user → User.
-func UpperFirstCase(input string) string
+func UpperFirst(input string) string
+
+// Ufirst 首字母大写.
+func Ufirst(s string) string 
+
+// Lfirst 首字母小写.
+func Lfirst(s string) string 
 
 // FirstLowerCase 获取字符串的首字母小写.
 // user → u.
@@ -78,7 +84,19 @@ func IsNotBlank(str string) bool
 func IsAllNotBlank(strs ...string) bool
 
 // Substr 截取字符串.
-func Substr(s string, start, length int) string 
+func Substr(s string, start int, strlength ...int) string
+
+// Slug 空格转换为指定分隔符.
+func Slug(str, separator string) string
+
+// Char returns a char slice
+func Char(str string) []strin
+
+// Escape 转义字符串.
+func Escape(s string) string
+
+// SubByte 截取指定长度的字节.
+func SubByte(str string, length int) string
 
 ```
 
