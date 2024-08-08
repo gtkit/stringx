@@ -104,24 +104,21 @@ func TestRandStr(t *testing.T) {
 	wg.Add(3)
 	go func() {
 		defer wg.Done()
-		str := stringx.RandomString(5)
+		str := stringx.Random(5)
 		t.Log("---str1: ", str)
 	}()
 	go func() {
 		defer wg.Done()
-		str := stringx.RandomString(0)
+		str := stringx.Random(0)
 		t.Log("---str2: ", str)
 	}()
 
 	go func() {
 		defer wg.Done()
-		str := stringx.RandomString(10)
+		str := stringx.Random(10)
 		t.Log("---str3: ", str)
 	}()
-	// str := stringx.RandomNumber(5)
-	// if err != nil {
-	// 	t.Error(err)
-	// }
+
 	wg.Wait()
 }
 
@@ -149,7 +146,6 @@ func toLower(s string) string {
 	for i := 0; i < len(r); i++ {
 		if 'A' <= r[i] && r[i] <= 'Z' { // 判断是否为大写字母
 			r[i] += 'a' - 'A' // 转换为小写
-
 		}
 	}
 	return string(r) // 将rune切片转换回字符串
@@ -158,6 +154,12 @@ func toLower(s string) string {
 func TestToLower(t *testing.T) {
 	str := "HELLO WORLD"
 	newStr := toLower(str)
+	t.Log("newStr:", newStr)
+}
+
+func TestToUpper(t *testing.T) {
+	str := "hello world"
+	newStr := toUpper(str)
 	t.Log("newStr:", newStr)
 }
 
@@ -260,8 +262,8 @@ func TestUnicode(t *testing.T) {
 	t.Logf("[%c] 转成大写: %c \n\n", str2, unicode.ToUpper(str2))
 	// [a] 转成大写: A
 
-	var char1 rune = 'A'
-	var char2 rune = '中'
+	var char1 = 'A'
+	var char2 = '中'
 
 	t.Logf("Character 1: %c\n", char1)
 	t.Logf("Character 2: %c\n", char2)
@@ -273,7 +275,6 @@ func TestUnicode(t *testing.T) {
 	{
 		s := "你好"
 		t.Logf("len(%s) = %d", s, len(s))
-
 	}
 
 	{

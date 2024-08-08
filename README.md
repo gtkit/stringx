@@ -98,13 +98,32 @@ func Escape(s string) string
 // SubByte 截取指定长度的字节.
 func SubByte(str string, length int) string
 
+/**
+ * 生成随机字符串
+ * @param length 字符串长度
+ * @param chartype 字符串类型，可选值："l"、"u"、"lu"、"n"、"lun"、"sc"、"all"，默认值为"lun"
+ * @return 随机字符串
+ * l 小写字母
+ * u 大写字母
+ * lu 小写字母+大写字母
+ * n 数字
+ * lun 小写字母+大写字母+数字
+ * sc 特殊字符
+ * all 所有字符
+ */
+Random(length int, chartype ...string) string
+
+// SecRandom 生成长度为 length 的安全随机字符串.
+func SecRandom(length int) (string, error)
+
+// RandomN 生成长度为 length 随机数字字符串.
+func RandomN(length int) string 
 ```
 
 ### 字符串拼接
 ```
 // BuilderJoin joins a list of strings into a single string using a strings.Builder.
 func BuilderJoin(strs []string) string
-
 
 // BufferJoin joins a list of strings into a single string using a bytes.Buffer.
 func BufferJoin(strs []string) string

@@ -1,10 +1,6 @@
 package stringx
 
 import (
-	"crypto/rand"
-	"encoding/base64"
-	"io"
-	rand2 "math/rand/v2"
 	"strconv"
 	"strings"
 	"time"
@@ -237,43 +233,6 @@ func Ternary[T any](cond bool, a, b T) T {
 	return b
 }
 
-// RandomString 生成长度为 length 的随机字符串.
-func RandomString(length int) string {
-	letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = letters[rand2.N(len(letters))]
-	}
-	return string(b)
-}
-
-// SecRandomString 生成长度为 length 的安全随机字符串.
-func SecRandomString(length int) (string, error) {
-	b := make([]byte, length)
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
-	}
-	// 注意：如果你需要确切的字符串长度，请根据base64编码的特性,
-	// 调整b的长度，因为base64编码会增加输出长度。
-	return base64.URLEncoding.EncodeToString(b)[:length], nil
-}
-
-// RandomNumber 生成长度为 length 随机数字字符串.
-func RandomNumber(length int) string {
-	table := [...]byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
-	b := make([]byte, length)
-	n, err := io.ReadAtLeast(rand.Reader, b, length)
-	if n != length {
-		panic(err)
-	}
-	for i := 0; i < len(b); i++ {
-		b[i] = table[int(b[i])%len(table)]
-	}
-	return string(b)
-}
-
 // Substr 截取字符串.
 func Substr(s string, start int, strlength ...int) string {
 	charlist := []rune(s)
@@ -313,7 +272,6 @@ func Substr(s string, start int, strlength ...int) string {
 	}
 
 	return string(charlist[start:end])
-
 }
 
 // Slug 空格转换为指定分隔符.
@@ -327,7 +285,7 @@ func SubByte(str string, length int) string {
 	bl := 0
 	for i := len(bs) - 1; i >= 0; i-- {
 		switch {
-		case bs[i] >= 0 && bs[i] <= 127:
+		case bs[i] <= 127:
 			return string(bs[:i+1])
 		case bs[i] >= 128 && bs[i] <= 191:
 			bl++
@@ -354,7 +312,7 @@ func SubByte(str string, length int) string {
 	return ""
 }
 
-// Char returns a char slice
+// Char returns a char slice.
 func Char(str string) []string {
 	c := make([]string, 0)
 	for _, v := range str {
@@ -366,7 +324,7 @@ func Char(str string) []string {
 // Escape 转义字符串.
 func Escape(s string) string {
 	str := strconv.Quote(s)
-	str = strings.Replace(str, "'", "\\'", -1)
+	str = strings.ReplaceAll(str, "'", "\\'")
 	strlist := []rune(str)
 	l := len(strlist)
 	return Substr(str, 1, l-2)
