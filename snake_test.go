@@ -30,7 +30,6 @@ func TestToSnake(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := ToSnake(tc.in)
 			if got != tc.want {
@@ -60,7 +59,6 @@ func TestToKebab(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := ToKebab(tc.in)
 			if got != tc.want {

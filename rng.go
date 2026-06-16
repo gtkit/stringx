@@ -10,18 +10,16 @@ import (
 // 当前实现直接复用 math/rand/v2 的并发安全顶层函数，以减少共享状态带来的风险。
 type RNG struct{}
 
-// rng 是当前包内部复用的随机数辅助实例。
-var rng RNG
-
 // RandInt 返回区间 [min, max) 内的随机整数。
 //
 // 当 max 小于等于 min 时，返回 min。
-func RandInt(min, max int) int {
-	if max <= min {
-		return min
+func RandInt(low, high int) int {
+	if high <= low {
+		return low
 	}
 
-	return min + RUint(max-min)
+	span := uint(high) - uint(low)                            //nolint:gosec // G115: intentional modular arithmetic for full-width int ranges.
+	return int(uint(low) + uint(rand2.Uint64N(uint64(span)))) //nolint:gosec // G115: result is constrained to the int range by construction.
 }
 
 // RUint 返回区间 [0, n) 内的随机整数。
@@ -32,7 +30,7 @@ func RUint(n int) int {
 		return 0
 	}
 
-	return int(rng.Uint32n(uint32(n)))
+	return int(rand2.Uint64N(uint64(n))) //nolint:gosec // G115: n is positive int, so the generated value is always < n.
 }
 
 // RandIntHandler 连续生成 count 个随机整数，并将结果回调给 handler。

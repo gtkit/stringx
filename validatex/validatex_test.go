@@ -27,6 +27,21 @@ func TestValidateAndParse(t *testing.T) {
 		t.Fatalf("ValidateHTTPURL returned error: %v", err)
 	}
 
+	if err := ValidateHTTPURL("HTTP://example.com:443/path"); err != nil {
+		t.Fatalf("ValidateHTTPURL should accept uppercase HTTP scheme and valid port: %v", err)
+	}
+
+	for _, input := range []string{
+		"https://example.com:bad",
+		"https://example.com:99999",
+		"https://example.com:",
+		"https://[2001:db8::1]:bad",
+	} {
+		if err := ValidateHTTPURL(input); err == nil {
+			t.Fatalf("ValidateHTTPURL(%q) should reject invalid port", input)
+		}
+	}
+
 	if !IsHostname("例子.中国") {
 		t.Fatal("IsHostname should accept IDNA hostname")
 	}
@@ -64,8 +79,8 @@ func TestValidateAndParse(t *testing.T) {
 		t.Fatalf("ParseChinaIDCard returned error: %v", err)
 	}
 
-	if info.BirthDate.Format("2006-01-02") != "1949-12-31" {
-		t.Fatalf("BirthDate = %s, want 1949-12-31", info.BirthDate.Format("2006-01-02"))
+	if info.BirthDate.Format(time.DateOnly) != "1949-12-31" {
+		t.Fatalf("BirthDate = %s, want 1949-12-31", info.BirthDate.Format(time.DateOnly))
 	}
 
 	if info.Gender != GenderFemale {

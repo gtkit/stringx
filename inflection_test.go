@@ -19,7 +19,6 @@ func TestPluralAndSingular(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			if got := Plural(tc.singular); got != tc.plural {
 				t.Fatalf("Plural(%q) = %q, want %q", tc.singular, got, tc.plural)
@@ -110,11 +109,11 @@ func TestInflectionConcurrentReadWrite(t *testing.T) {
 	})
 
 	var wg sync.WaitGroup
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < 100; j++ {
+			for range 100 {
 				_ = Plural("person")
 				_ = Singular("people")
 			}
@@ -124,10 +123,39 @@ func TestInflectionConcurrentReadWrite(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			AddUncountable("metadata")
 		}
 	}()
 
 	wg.Wait()
+}
+
+func TestInflectionLiteralCustomWords(t *testing.T) {
+	plurals := GetPlural()
+	singulars := GetSingular()
+	irregulars := GetIrregular()
+	uncountables := GetUncountable()
+	t.Cleanup(func() {
+		SetPlural(plurals)
+		SetSingular(singulars)
+		SetIrregular(irregulars)
+		SetUncountable(uncountables)
+	})
+
+	AddUncountable("foo.bar")
+	AddIrregular("c++", "c++es")
+
+	if got := Plural("foo.bar"); got != "foo.bar" {
+		t.Fatalf("Plural(%q) = %q, want %q", "foo.bar", got, "foo.bar")
+	}
+	if got := Plural("fooXbar"); got != "fooXbars" {
+		t.Fatalf("Plural(%q) = %q, want %q", "fooXbar", got, "fooXbars")
+	}
+	if got := Plural("c++"); got != "c++es" {
+		t.Fatalf("Plural(%q) = %q, want %q", "c++", got, "c++es")
+	}
+	if got := Singular("c++es"); got != "c++" {
+		t.Fatalf("Singular(%q) = %q, want %q", "c++es", got, "c++")
+	}
 }

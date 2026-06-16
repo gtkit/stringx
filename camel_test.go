@@ -23,7 +23,6 @@ func TestToCamel(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := ToCamel(tc.in)
 			if got != tc.want {
@@ -51,7 +50,6 @@ func TestToLowerCamel(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := ToLowerCamel(tc.in)
 			if got != tc.want {

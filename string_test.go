@@ -150,3 +150,19 @@ func TestUnsafeConverters(t *testing.T) {
 		t.Fatalf("String2Bytes returned %q, want %q", got, []byte("hello"))
 	}
 }
+
+func TestSafeByteStringClones(t *testing.T) {
+	original := "hello"
+	copiedBytes := CloneStringBytes(original)
+	copiedBytes[0] = 'H'
+	if original != "hello" {
+		t.Fatalf("CloneStringBytes mutation changed original string to %q", original)
+	}
+
+	bytesValue := []byte("hello")
+	copiedString := CloneBytesString(bytesValue)
+	bytesValue[0] = 'H'
+	if copiedString != "hello" {
+		t.Fatalf("CloneBytesString returned %q after source mutation, want %q", copiedString, "hello")
+	}
+}

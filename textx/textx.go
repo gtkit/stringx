@@ -8,8 +8,10 @@ import (
 	"unicode/utf8"
 )
 
-const bufferMaxInitGrowSize = 2048
-const minCJKCharacter = '\u3400'
+const (
+	bufferMaxInitGrowSize = 2048
+	minCJKCharacter       = '\u3400'
+)
 
 type stringBuilder = strings.Builder
 
@@ -19,7 +21,11 @@ func LowerFirst(input string) string {
 	if size == 0 {
 		return ""
 	}
-	return string(unicode.ToLower(r)) + input[size:]
+	lower := unicode.ToLower(r)
+	if lower == r {
+		return input
+	}
+	return string(lower) + input[size:]
 }
 
 // UpperFirst 将字符串首个 rune 转换为大写。
@@ -28,7 +34,11 @@ func UpperFirst(input string) string {
 	if size == 0 {
 		return input
 	}
-	return string(unicode.ToUpper(r)) + input[size:]
+	upper := unicode.ToUpper(r)
+	if upper == r {
+		return input
+	}
+	return string(upper) + input[size:]
 }
 
 // FirstLowerCase 返回字符串首个 rune 的小写形式。
@@ -56,10 +66,17 @@ func IsEmpty(str string) bool { return str == "" }
 func IsNotEmpty(str string) bool { return str != "" }
 
 // IsBlank 判断字符串在去除首尾空白后是否为空。
-func IsBlank(str string) bool { return strings.TrimSpace(str) == "" }
+func IsBlank(str string) bool {
+	for _, r := range str {
+		if !unicode.IsSpace(r) {
+			return false
+		}
+	}
+	return true
+}
 
 // IsNotBlank 判断字符串在去除首尾空白后是否仍非空。
-func IsNotBlank(str string) bool { return strings.TrimSpace(str) != "" }
+func IsNotBlank(str string) bool { return !IsBlank(str) }
 
 // IsAllBlank 判断所有字符串是否全为空白。
 func IsAllBlank(strs ...string) bool {
@@ -83,7 +100,30 @@ func IsAllNotBlank(strs ...string) bool {
 
 // NormalizeSpace 去除首尾空白，并将连续空白折叠为单个空格。
 func NormalizeSpace(str string) string {
-	return strings.Join(strings.Fields(str), " ")
+	if str == "" || isNormalizedSpace(str) {
+		return str
+	}
+	if isASCII(str) {
+		return normalizeASCIISpace(str)
+	}
+
+	var builder strings.Builder
+	builder.Grow(len(str))
+	pendingSpace := false
+	for _, r := range str {
+		if unicode.IsSpace(r) {
+			if builder.Len() > 0 {
+				pendingSpace = true
+			}
+			continue
+		}
+		if pendingSpace {
+			builder.WriteByte(' ')
+			pendingSpace = false
+		}
+		builder.WriteRune(r)
+	}
+	return builder.String()
 }
 
 // Substr 按 rune 下标截取字符串。
@@ -131,33 +171,12 @@ func SubByte(str string, length int) string {
 		return str
 	}
 
-	bs := []byte(str)[:length]
-	continuationBytes := 0
-	for i := len(bs) - 1; i >= 0; i-- {
-		switch {
-		case bs[i] <= 127:
-			return string(bs[:i+1])
-		case bs[i] >= 128 && bs[i] <= 191:
-			continuationBytes++
-		case bs[i] >= 192 && bs[i] <= 253:
-			expectedLength := 0
-			switch {
-			case bs[i]&252 == 252:
-				expectedLength = 6
-			case bs[i]&248 == 248:
-				expectedLength = 5
-			case bs[i]&240 == 240:
-				expectedLength = 4
-			case bs[i]&224 == 224:
-				expectedLength = 3
-			default:
-				expectedLength = 2
-			}
-			if continuationBytes+1 == expectedLength {
-				return string(bs[:i+expectedLength])
-			}
-			return string(bs[:i])
+	for length > 0 {
+		r, size := utf8.DecodeLastRuneInString(str[:length])
+		if r != utf8.RuneError || size != 1 {
+			return str[:length]
 		}
+		length--
 	}
 	return ""
 }
@@ -174,9 +193,7 @@ func Char(str string) []string {
 // Escape 返回适合放入 Go 双引号字面量中的转义结果，并去掉外围引号。
 func Escape(s string) string {
 	quoted := strconv.Quote(s)
-	quoted = strings.ReplaceAll(quoted, "'", "\\'")
-	runes := []rune(quoted)
-	return Substr(quoted, 1, len(runes)-2)
+	return strings.ReplaceAll(quoted[1:len(quoted)-1], "'", "\\'")
 }
 
 // Reverse 按 rune 反转字符串。
@@ -245,7 +262,7 @@ func RuneWidth(r rune) int {
 // Width 返回字符串在等宽字体中的显示宽度。
 func Width(str string) int {
 	var width int
-	for len(str) > 0 {
+	for str != "" {
 		r, size := utf8.DecodeRuneInString(str)
 		width += RuneWidth(r)
 		str = str[size:]
@@ -257,7 +274,7 @@ func Width(str string) int {
 func WordCount(str string) int {
 	var count int
 	inWord := false
-	for len(str) > 0 {
+	for str != "" {
 		r, size := utf8.DecodeRuneInString(str)
 		switch {
 		case isAlphabet(r):
@@ -281,7 +298,7 @@ func WordSplit(str string) []string {
 	var pos int
 	inWord := false
 
-	for len(str) > 0 {
+	for str != "" {
 		r, size := utf8.DecodeRuneInString(str)
 		switch {
 		case isAlphabet(r):
@@ -392,7 +409,8 @@ type runeRangeMap struct {
 }
 
 type runeDict struct {
-	Dict [unicode.MaxASCII + 1]rune
+	Dict  [unicode.MaxASCII + 1]rune
+	Match [unicode.MaxASCII + 1]bool
 }
 
 type runeMap map[rune]rune
@@ -414,7 +432,7 @@ func NewTranslator(from, to string) *Translator {
 		return tr
 	}
 	reverted := from[0] == '^'
-	deletion := len(to) == 0
+	deletion := to == ""
 	if reverted {
 		from = from[1:]
 	}
@@ -448,7 +466,7 @@ func NewTranslator(from, to string) *Translator {
 		toEnd = utf8.RuneError
 	} else if reverted {
 		var size int
-		for len(to) > 0 {
+		for to != "" {
 			toStart, size = utf8.DecodeRuneInString(to)
 			to = to[size:]
 		}
@@ -458,7 +476,7 @@ func NewTranslator(from, to string) *Translator {
 	}
 
 	fromEnd = utf8.RuneError
-	for len(from) > 0 {
+	for from != "" {
 		from, fromStart, fromEnd, fromRangeStep = nextRuneRange(from, fromEnd)
 		if fromRangeStep == 0 {
 			singleRunes = tr.addRune(fromStart, toStart, singleRunes)
@@ -514,7 +532,7 @@ func (tr *Translator) Translate(str string) string {
 	}
 	orig := str
 	var output *stringBuilder
-	for len(str) > 0 {
+	for str != "" {
 		r, size := utf8.DecodeRuneInString(str)
 		r, needTranslate := tr.TranslateRune(r)
 		if needTranslate && output == nil {
@@ -537,7 +555,7 @@ func (tr *Translator) TranslateRune(r rune) (result rune, translated bool) {
 	case tr.quickDict != nil:
 		if r <= unicode.MaxASCII {
 			result = tr.quickDict.Dict[r]
-			if result != 0 {
+			if tr.quickDict.Match[r] {
 				translated = true
 				if tr.mappedRune >= 0 {
 					result = tr.mappedRune
@@ -586,7 +604,7 @@ func (tr *Translator) TranslateRune(r rune) (result rune, translated bool) {
 	if !translated {
 		result = r
 	}
-	return
+	return result, translated
 }
 
 // HasPattern 返回是否存在有效模式。
@@ -611,7 +629,7 @@ func Count(str, pattern string) int {
 	}
 	tr := NewTranslator(pattern, "")
 	count := 0
-	for len(str) > 0 {
+	for str != "" {
 		r, size := utf8.DecodeRuneInString(str)
 		str = str[size:]
 		if _, matched := tr.TranslateRune(r); matched {
@@ -631,7 +649,7 @@ func Squeeze(str, pattern string) string {
 	if pattern != "" {
 		tr = NewTranslator(pattern, "")
 	}
-	for len(str) > 0 {
+	for str != "" {
 		r, size := utf8.DecodeRuneInString(str)
 		if last == r && !skipSqueeze {
 			if tr != nil {
@@ -671,12 +689,63 @@ func allocBuffer(orig, cur string) *stringBuilder {
 	return output
 }
 
-func firstRuneInfo(s string) (rune, int) {
+func firstRuneInfo(s string) (r rune, size int) {
 	if s == "" {
 		return utf8.RuneError, 0
 	}
-	r, size := utf8.DecodeRuneInString(s)
+	r, size = utf8.DecodeRuneInString(s)
 	return r, size
+}
+
+func isNormalizedSpace(str string) bool {
+	seenNonSpace := false
+	prevSpace := false
+	for _, r := range str {
+		if unicode.IsSpace(r) {
+			if !seenNonSpace || prevSpace || r != ' ' {
+				return false
+			}
+			prevSpace = true
+			continue
+		}
+		seenNonSpace = true
+		prevSpace = false
+	}
+	return !prevSpace
+}
+
+func isASCII(str string) bool {
+	for i := range len(str) {
+		if str[i] >= utf8.RuneSelf {
+			return false
+		}
+	}
+	return true
+}
+
+func normalizeASCIISpace(str string) string {
+	var builder strings.Builder
+	builder.Grow(len(str))
+	pendingSpace := false
+	for i := range len(str) {
+		c := str[i]
+		if isASCIISpace(c) {
+			if builder.Len() > 0 {
+				pendingSpace = true
+			}
+			continue
+		}
+		if pendingSpace {
+			builder.WriteByte(' ')
+			pendingSpace = false
+		}
+		builder.WriteByte(c)
+	}
+	return builder.String()
+}
+
+func isASCIISpace(c byte) bool {
+	return c == ' ' || '\t' <= c && c <= '\r'
 }
 
 func isAlphabet(r rune) bool {
@@ -704,7 +773,7 @@ func sliceRuneRange(str string, start, end int) (startPos, endPos int) {
 		end = start
 	}
 	var size, runeIndex int
-	for len(str) > 0 {
+	for str != "" {
 		if runeIndex == start {
 			startPos = endPos
 		}
@@ -724,11 +793,11 @@ func sliceRuneRange(str string, start, end int) (startPos, endPos int) {
 
 func writePadString(output *stringBuilder, pad string, padLen, remains int) {
 	repeats := remains / padLen
-	for i := 0; i < repeats; i++ {
+	for range repeats {
 		output.WriteString(pad)
 	}
 	remains %= padLen
-	for i := 0; i < remains; i++ {
+	for range remains {
 		r, size := utf8.DecodeRuneInString(pad)
 		output.WriteRune(r)
 		pad = pad[size:]
@@ -741,6 +810,7 @@ func (tr *Translator) addRune(from, to rune, singleRunes []rune) []rune {
 			tr.quickDict = &runeDict{}
 		}
 		tr.quickDict.Dict[from] = to
+		tr.quickDict.Match[from] = true
 	} else {
 		if tr.runeMap == nil {
 			tr.runeMap = make(runeMap)
@@ -750,7 +820,7 @@ func (tr *Translator) addRune(from, to rune, singleRunes []rune) []rune {
 	return append(singleRunes, from)
 }
 
-func (tr *Translator) addRuneRange(fromLo, fromHi, toLo, toHi rune, singleRunes []rune) (rune, rune) {
+func (tr *Translator) addRuneRange(fromLo, fromHi, toLo, toHi rune, singleRunes []rune) (from, to rune) {
 	var rrm *runeRangeMap
 	if fromLo < fromHi {
 		rrm = &runeRangeMap{FromLo: fromLo, FromHi: fromHi, ToLo: toLo, ToHi: toHi}
@@ -761,6 +831,7 @@ func (tr *Translator) addRuneRange(fromLo, fromHi, toLo, toHi rune, singleRunes 
 		if rrm.FromLo <= r && r <= rrm.FromHi {
 			if r <= unicode.MaxASCII {
 				tr.quickDict.Dict[r] = 0
+				tr.quickDict.Match[r] = false
 			} else {
 				delete(tr.runeMap, r)
 			}
@@ -770,11 +841,11 @@ func (tr *Translator) addRuneRange(fromLo, fromHi, toLo, toHi rune, singleRunes 
 	return fromHi, toHi
 }
 
-func nextRuneRange(str string, last rune) (remaining string, start, end rune, rangeStep rune) {
+func nextRuneRange(str string, last rune) (remaining string, start, end, rangeStep rune) {
 	remaining = str
 	escaping := false
 	isRange := false
-	for len(remaining) > 0 {
+	for remaining != "" {
 		r, size := utf8.DecodeRuneInString(remaining)
 		remaining = remaining[size:]
 		if !escaping {
@@ -786,7 +857,6 @@ func nextRuneRange(str string, last rune) (remaining string, start, end rune, ra
 				if last == utf8.RuneError {
 					continue
 				}
-				start = last
 				isRange = true
 				continue
 			}
@@ -806,11 +876,11 @@ func nextRuneRange(str string, last rune) (remaining string, start, end rune, ra
 					rangeStep = -1
 				}
 			}
-			return
+			return remaining, start, end, rangeStep
 		}
 		last = r
 	}
 	start = last
 	end = utf8.RuneError
-	return
+	return remaining, start, end, rangeStep
 }

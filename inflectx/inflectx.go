@@ -11,6 +11,7 @@ import (
 type inflection struct {
 	regexp  *regexp.Regexp
 	replace string
+	literal bool
 }
 
 // Regular 表示一条基于正则表达式的单复数替换规则。
@@ -217,7 +218,7 @@ func Plural(str string) string {
 	defer inflectionMu.RUnlock()
 	for _, inf := range compiledPluralMaps {
 		if inf.regexp.MatchString(str) {
-			return inf.regexp.ReplaceAllString(str, inf.replace)
+			return inf.replaceAll(str)
 		}
 	}
 	return str
@@ -229,7 +230,7 @@ func Singular(str string) string {
 	defer inflectionMu.RUnlock()
 	for _, inf := range compiledSingularMaps {
 		if inf.regexp.MatchString(str) {
-			return inf.regexp.ReplaceAllString(str, inf.replace)
+			return inf.replaceAll(str)
 		}
 	}
 	return str
@@ -242,28 +243,34 @@ func compile() {
 }
 
 func compileLocked() {
-	compiledPluralMaps = compiledPluralMaps[:0]
-	compiledSingularMaps = compiledSingularMaps[:0]
+	compiledPluralMaps = resetInflections(
+		compiledPluralMaps,
+		len(uncountableInflections)+len(irregularInflections)*3+len(pluralInflections)*3,
+	)
+	compiledSingularMaps = resetInflections(
+		compiledSingularMaps,
+		len(uncountableInflections)+len(irregularInflections)*3+len(singularInflections)*3,
+	)
 
 	for _, uncountable := range uncountableInflections {
-		inf := inflection{regexp: regexp.MustCompile("^(?i)(" + uncountable + ")$"), replace: "${1}"}
+		inf := inflection{regexp: regexp.MustCompile("(?i)^(" + regexp.QuoteMeta(uncountable) + ")$"), replace: "${1}"}
 		compiledPluralMaps = append(compiledPluralMaps, inf)
 		compiledSingularMaps = append(compiledSingularMaps, inf)
 	}
 
 	for _, value := range irregularInflections {
 		compiledPluralMaps = append(compiledPluralMaps,
-			inflection{regexp: regexp.MustCompile(strings.ToUpper(value.Singular) + "$"), replace: strings.ToUpper(value.Plural)},
-			inflection{regexp: regexp.MustCompile(titleFirst(value.Singular) + "$"), replace: titleFirst(value.Plural)},
-			inflection{regexp: regexp.MustCompile(value.Singular + "$"), replace: value.Plural},
+			inflection{regexp: regexp.MustCompile(regexp.QuoteMeta(strings.ToUpper(value.Singular)) + "$"), replace: strings.ToUpper(value.Plural), literal: true},
+			inflection{regexp: regexp.MustCompile(regexp.QuoteMeta(titleFirst(value.Singular)) + "$"), replace: titleFirst(value.Plural), literal: true},
+			inflection{regexp: regexp.MustCompile(regexp.QuoteMeta(value.Singular) + "$"), replace: value.Plural, literal: true},
 		)
 	}
 
 	for _, value := range irregularInflections {
 		compiledSingularMaps = append(compiledSingularMaps,
-			inflection{regexp: regexp.MustCompile(strings.ToUpper(value.Plural) + "$"), replace: strings.ToUpper(value.Singular)},
-			inflection{regexp: regexp.MustCompile(titleFirst(value.Plural) + "$"), replace: titleFirst(value.Singular)},
-			inflection{regexp: regexp.MustCompile(value.Plural + "$"), replace: value.Singular},
+			inflection{regexp: regexp.MustCompile(regexp.QuoteMeta(strings.ToUpper(value.Plural)) + "$"), replace: strings.ToUpper(value.Singular), literal: true},
+			inflection{regexp: regexp.MustCompile(regexp.QuoteMeta(titleFirst(value.Plural)) + "$"), replace: titleFirst(value.Singular), literal: true},
+			inflection{regexp: regexp.MustCompile(regexp.QuoteMeta(value.Plural) + "$"), replace: value.Singular, literal: true},
 		)
 	}
 
@@ -284,6 +291,22 @@ func compileLocked() {
 			inflection{regexp: regexp.MustCompile("(?i)" + value.Find), replace: value.Replace},
 		)
 	}
+}
+
+func (inf inflection) replaceAll(str string) string {
+	if inf.literal {
+		return inf.regexp.ReplaceAllStringFunc(str, func(string) string {
+			return inf.replace
+		})
+	}
+	return inf.regexp.ReplaceAllString(str, inf.replace)
+}
+
+func resetInflections(dst []inflection, size int) []inflection {
+	if cap(dst) < size {
+		return make([]inflection, 0, size)
+	}
+	return dst[:0]
 }
 
 func cloneRegularSlice(src RegularSlice) RegularSlice {

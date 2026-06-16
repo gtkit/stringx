@@ -327,6 +327,7 @@ fmt.Println(stringx.Plural("analysis")) // analyses
   - `sc`：特殊字符
   - `all`：全部字符
 - `SecRandom(length int) (string, error)`：使用加密安全随机源生成随机字符串。
+- `RandomFromCharset(length int, charset []byte) string`：使用显式字符集生成随机字符串。
 - `RandomN(length int) string`：随机数字字符串。
 - `RandStr(length int) string`：随机小写字母字符串。
 - `RandStrUpper(length int) string`：随机大写字母字符串。
@@ -349,6 +350,7 @@ fmt.Println(stringx.Random(8))         // 随机字母数字
 fmt.Println(stringx.Random(6, "n"))    // 随机数字
 fmt.Println(stringx.RandStr(6))        // 随机小写字母
 fmt.Println(stringx.RandId())          // 16 位十六进制 ID
+fmt.Println(stringx.RandomFromCharset(6, []byte("ABC123"))) // 自定义字符集
 fmt.Println(stringx.RandomEle([]string{"a", "b", "c"})) // 随机元素
 
 fmt.Println(stringx.RandInt(10, 20)) // [10,20) 之间的整数
@@ -362,6 +364,8 @@ fmt.Println(r.Uint32n(100)) // [0,100) 之间的 uint32
 
 - `String2Bytes(s string) []byte`：零拷贝把字符串转为字节切片。
 - `Bytes2String(b []byte) string`：零拷贝把字节切片转为字符串。
+- `CloneStringBytes(s string) []byte`：复制字符串，返回可安全修改的字节切片。
+- `CloneBytesString(b []byte) string`：复制字节切片，返回不受后续修改影响的字符串。
 
 这两个方法基于 `unsafe`，返回值和原对象共享底层内存：
 
@@ -371,9 +375,13 @@ fmt.Println(r.Uint32n(100)) // [0,100) 之间的 uint32
 ```go
 bs := stringx.String2Bytes("hello")
 str := stringx.Bytes2String([]byte("world"))
+safeBytes := stringx.CloneStringBytes("mutable")
+safeString := stringx.CloneBytesString([]byte("snapshot"))
 
 fmt.Println(string(bs)) // hello
 fmt.Println(str)        // world
+fmt.Println(safeBytes)  // [109 117 116 97 98 108 101]
+fmt.Println(safeString) // snapshot
 ```
 
 ## 子包补充说明
@@ -425,6 +433,7 @@ fmt.Println(err == nil) // true
 
 - `Random`
 - `SecRandom`
+- `RandomFromCharset`
 - `RandomN`
 - `RandStr`
 - `RandStrUpper`

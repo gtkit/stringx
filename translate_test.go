@@ -6,6 +6,10 @@ func TestTranslate(t *testing.T) {
 	if got := Translate("hello", "aeiou", "12345"); got != "h2ll4" {
 		t.Fatalf("Translate(%q, %q, %q) = %q, want %q", "hello", "aeiou", "12345", got, "h2ll4")
 	}
+
+	if got := Translate("a b", "a", "\x00"); got != "\x00 b" {
+		t.Fatalf("Translate should support ASCII to NUL mapping, got %q", got)
+	}
 }
 
 func TestDelete(t *testing.T) {

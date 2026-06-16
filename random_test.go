@@ -86,6 +86,22 @@ func TestRandomNAndRandn(t *testing.T) {
 	}
 }
 
+func TestRandomFromCharset(t *testing.T) {
+	got := RandomFromCharset(32, []byte("ab"))
+	if len(got) != 32 {
+		t.Fatalf("RandomFromCharset length = %d, want 32", len(got))
+	}
+	for _, r := range got {
+		if r != 'a' && r != 'b' {
+			t.Fatalf("RandomFromCharset produced rune %q outside custom charset", r)
+		}
+	}
+
+	if got := RandomFromCharset(8, nil); got != "" {
+		t.Fatalf("RandomFromCharset with empty charset = %q, want empty string", got)
+	}
+}
+
 func TestRandStrHelpers(t *testing.T) {
 	if got := RandStr(16); len(got) != 16 {
 		t.Fatalf("RandStr(16) length = %d, want 16", len(got))
@@ -121,7 +137,7 @@ func TestRandomEle(t *testing.T) {
 	}
 }
 
-func TestRandomFunctionsConcurrent(t *testing.T) {
+func TestRandomFunctionsConcurrent(_ *testing.T) {
 	var wg sync.WaitGroup
 
 	for range 32 {
@@ -135,4 +151,39 @@ func TestRandomFunctionsConcurrent(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestRandIntLargeRange(t *testing.T) {
+	const maxInt = int(^uint(0) >> 1)
+	const minInt = -maxInt - 1
+
+	if got := RandInt(10, 10); got != 10 {
+		t.Fatalf("RandInt(10, 10) = %d, want 10", got)
+	}
+
+	if got := RandInt(10, 5); got != 10 {
+		t.Fatalf("RandInt(10, 5) = %d, want 10", got)
+	}
+
+	for range 128 {
+		got := RandInt(minInt, maxInt)
+		if got < minInt || got >= maxInt {
+			t.Fatalf("RandInt(minInt, maxInt) = %d, want in [%d, %d)", got, minInt, maxInt)
+		}
+	}
+}
+
+func TestRUintLargeN(t *testing.T) {
+	const maxInt = int(^uint(0) >> 1)
+
+	if got := RUint(0); got != 0 {
+		t.Fatalf("RUint(0) = %d, want 0", got)
+	}
+
+	for range 128 {
+		got := RUint(maxInt)
+		if got < 0 || got >= maxInt {
+			t.Fatalf("RUint(maxInt) = %d, want in [0, %d)", got, maxInt)
+		}
+	}
 }

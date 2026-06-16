@@ -2,10 +2,12 @@ package stringx
 
 import "github.com/gtkit/stringx/inflectx"
 
-type Regular = inflectx.Regular
-type Irregular = inflectx.Irregular
-type RegularSlice = inflectx.RegularSlice
-type IrregularSlice = inflectx.IrregularSlice
+type (
+	Regular        = inflectx.Regular
+	Irregular      = inflectx.Irregular
+	RegularSlice   = inflectx.RegularSlice
+	IrregularSlice = inflectx.IrregularSlice
+)
 
 // AddPlural 添加一条复数变形规则。
 func AddPlural(find, replace string) { inflectx.AddPlural(find, replace) }

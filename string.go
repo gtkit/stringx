@@ -6,10 +6,22 @@ import (
 )
 
 // String2Bytes 在不发生额外内存拷贝的情况下，将字符串转换为字节切片。
+//
+// 返回的切片与原字符串共享底层数据，只适合只读场景，调用方不得修改返回切片。
+// 如果结果需要被修改，请使用 CloneStringBytes。
 func String2Bytes(s string) []byte { return unsafex.String2Bytes(s) }
 
 // Bytes2String 在不发生额外内存拷贝的情况下，将字节切片转换为字符串。
+//
+// 返回的字符串与原字节切片共享底层数据；原切片后续修改会影响字符串视图。
+// 如果需要稳定不可变快照，请使用 CloneBytesString。
 func Bytes2String(b []byte) string { return unsafex.Bytes2String(b) }
+
+// CloneStringBytes 将字符串复制为可安全修改的字节切片。
+func CloneStringBytes(s string) []byte { return []byte(s) }
+
+// CloneBytesString 将字节切片复制为不受后续切片修改影响的字符串。
+func CloneBytesString(b []byte) string { return string(b) }
 
 // LowerFirst 将字符串首个 rune 转换为小写，其余内容保持不变。
 func LowerFirst(input string) string { return textx.LowerFirst(input) }

@@ -100,7 +100,7 @@ func ValidateHTTPURL(raw string) error {
 	if err != nil {
 		return err
 	}
-	if u.Scheme != "http" && u.Scheme != "https" {
+	if !strings.EqualFold(u.Scheme, "http") && !strings.EqualFold(u.Scheme, "https") {
 		return fmt.Errorf("unsupported URL scheme %q", u.Scheme)
 	}
 	return validateURLHost(u)
@@ -113,8 +113,7 @@ func IsHostname(host string) bool {
 
 // ValidateHostname 验证字符串是否为合法主机名。
 func ValidateHostname(host string) error {
-	_, err := normalizeHostnameASCII(host)
-	return err
+	return normalizeHostnameASCII(host)
 }
 
 // IsIP 判断字符串是否为合法 IP 地址。
@@ -200,14 +199,15 @@ func ValidateUUID(text string) error {
 	if len(text) != 36 {
 		return errors.New("UUID length must be 36")
 	}
-	for i, r := range text {
+	for i := range len(text) {
+		b := text[i]
 		switch i {
 		case 8, 13, 18, 23:
-			if r != '-' {
+			if b != '-' {
 				return errors.New("UUID hyphen position is invalid")
 			}
 		default:
-			if !isHexRune(byte(r)) {
+			if !isHexByte(b) {
 				return errors.New("UUID contains non-hex character")
 			}
 		}
@@ -281,12 +281,12 @@ func ValidateChinaIDCard(text string) error {
 	}
 
 	text = strings.ToUpper(text)
-	for i := 0; i < 17; i++ {
+	for i := range 17 {
 		if text[i] < '0' || text[i] > '9' {
 			return errors.New("ID card must contain digits in first 17 positions")
 		}
 	}
-	if !(text[17] >= '0' && text[17] <= '9' || text[17] == 'X') {
+	if (text[17] < '0' || text[17] > '9') && text[17] != 'X' {
 		return errors.New("ID card last character must be digit or X")
 	}
 	if _, ok := chinaProvinceCodes[text[:2]]; !ok {
@@ -300,7 +300,7 @@ func ValidateChinaIDCard(text string) error {
 	}
 
 	sum := 0
-	for i := 0; i < 17; i++ {
+	for i := range 17 {
 		sum += int(text[i]-'0') * chinaIDCardWeights[i]
 	}
 	expected := chinaIDCardChecksumCodes[sum%11]
@@ -323,7 +323,7 @@ func ValidateChinaUSCC(text string) error {
 
 	text = strings.ToUpper(text)
 	sum := 0
-	for i := 0; i < 17; i++ {
+	for i := range 17 {
 		value, ok := chinaUSCCValueMap[text[i]]
 		if !ok {
 			return errors.New("USCC contains invalid character")
@@ -485,6 +485,10 @@ func parseAbsoluteURL(raw string) (*url.URL, error) {
 }
 
 func validateURLHost(u *url.URL) error {
+	if err := validateURLPort(u); err != nil {
+		return err
+	}
+
 	host := u.Hostname()
 	if host == "" {
 		return errors.New("URL host is empty")
@@ -495,51 +499,91 @@ func validateURLHost(u *url.URL) error {
 	return errors.New("URL host is invalid")
 }
 
-func isHostname(host string) bool {
-	_, err := normalizeHostnameASCII(host)
-	return err == nil
+func validateURLPort(u *url.URL) error {
+	host := u.Host
+	if strings.HasPrefix(host, "[") {
+		end := strings.LastIndexByte(host, ']')
+		if end < 0 {
+			return errors.New("URL IPv6 host is missing closing bracket")
+		}
+		rest := host[end+1:]
+		if rest == "" {
+			return nil
+		}
+		if rest[0] != ':' {
+			return errors.New("URL host is invalid")
+		}
+		return validatePort(rest[1:])
+	}
+
+	if strings.Count(host, ":") != 1 {
+		return nil
+	}
+	_, port, _ := strings.Cut(host, ":")
+	return validatePort(port)
 }
 
-func normalizeHostnameASCII(host string) (string, error) {
+func validatePort(port string) error {
+	if port == "" {
+		return errors.New("URL port is empty")
+	}
+	for i := range len(port) {
+		if port[i] < '0' || port[i] > '9' {
+			return errors.New("URL port must contain digits only")
+		}
+	}
+	value, err := strconv.Atoi(port)
+	if err != nil || value > 65535 {
+		return errors.New("URL port is out of range")
+	}
+	return nil
+}
+
+func isHostname(host string) bool {
+	return normalizeHostnameASCII(host) == nil
+}
+
+func normalizeHostnameASCII(host string) error {
 	if host == "" {
-		return "", errors.New("hostname is empty")
+		return errors.New("hostname is empty")
 	}
 	host = strings.TrimSuffix(host, ".")
 	if host == "" {
-		return "", errors.New("hostname is empty after trimming trailing dot")
+		return errors.New("hostname is empty after trimming trailing dot")
 	}
 	if _, err := netip.ParseAddr(host); err == nil {
-		return "", errors.New("hostname cannot be a raw IP address")
+		return errors.New("hostname cannot be a raw IP address")
 	}
 	asciiHost, err := idna.Lookup.ToASCII(host)
 	if err != nil {
-		return "", fmt.Errorf("hostname IDNA conversion failed: %w", err)
+		return fmt.Errorf("hostname IDNA conversion failed: %w", err)
 	}
 	if asciiHost == "" || len(asciiHost) > 253 {
-		return "", errors.New("hostname length is invalid")
+		return errors.New("hostname length is invalid")
 	}
 	labels := strings.Split(asciiHost, ".")
 	for _, label := range labels {
-		if len(label) == 0 || len(label) > 63 {
-			return "", errors.New("hostname label length is invalid")
+		if label == "" || len(label) > 63 {
+			return errors.New("hostname label length is invalid")
 		}
 		if label[0] == '-' || label[len(label)-1] == '-' {
-			return "", errors.New("hostname label cannot start or end with hyphen")
+			return errors.New("hostname label cannot start or end with hyphen")
 		}
-		for _, b := range []byte(label) {
+		for i := range len(label) {
+			b := label[i]
 			if !isASCIIAlphaNum(b) && b != '-' {
-				return "", errors.New("hostname contains invalid character")
+				return errors.New("hostname contains invalid character")
 			}
 		}
 	}
-	return asciiHost, nil
+	return nil
 }
 
 func isASCIIAlphaNum(b byte) bool {
 	return 'a' <= b && b <= 'z' || 'A' <= b && b <= 'Z' || '0' <= b && b <= '9'
 }
 
-func isHexRune(b byte) bool {
+func isHexByte(b byte) bool {
 	return '0' <= b && b <= '9' || 'a' <= b && b <= 'f' || 'A' <= b && b <= 'F'
 }
 
@@ -563,14 +607,16 @@ var chinaProvinceCodes = map[string]struct{}{
 	"71": {}, "81": {}, "82": {}, "91": {},
 }
 
-var chinaIDCardWeights = [...]int{7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2}
-var chinaIDCardChecksumCodes = [...]byte{'1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'}
+var (
+	chinaIDCardWeights       = [...]int{7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2}
+	chinaIDCardChecksumCodes = [...]byte{'1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'}
+)
 
 const chinaUSCCCharset = "0123456789ABCDEFGHJKLMNPQRTUWXY"
 
 var chinaUSCCValueMap = func() map[byte]int {
 	m := make(map[byte]int, len(chinaUSCCCharset))
-	for i := 0; i < len(chinaUSCCCharset); i++ {
+	for i := range len(chinaUSCCCharset) {
 		m[chinaUSCCCharset[i]] = i
 	}
 	return m

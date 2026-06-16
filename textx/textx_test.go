@@ -93,3 +93,29 @@ func TestTextHelpers(t *testing.T) {
 		t.Fatalf("Squeeze returned %q, want %q", got, "hello world")
 	}
 }
+
+func TestNormalizeSpaceFastPathAndUnicode(t *testing.T) {
+	if got := NormalizeSpace("hello world"); got != "hello world" {
+		t.Fatalf("NormalizeSpace returned %q, want %q", got, "hello world")
+	}
+
+	if allocs := testing.AllocsPerRun(1000, func() {
+		_ = NormalizeSpace("hello world")
+	}); allocs != 0 {
+		t.Fatalf("NormalizeSpace normalized fast path allocations = %.0f, want 0", allocs)
+	}
+
+	if got := NormalizeSpace("\u3000hello\t\nworld\u00a0"); got != "hello world" {
+		t.Fatalf("NormalizeSpace unicode whitespace returned %q, want %q", got, "hello world")
+	}
+}
+
+func TestSubByteEmojiBoundary(t *testing.T) {
+	input := "a🙂b"
+	if got := SubByte(input, 2); got != "a" {
+		t.Fatalf("SubByte(%q, 2) = %q, want %q", input, got, "a")
+	}
+	if got := SubByte(input, 5); got != "a🙂" {
+		t.Fatalf("SubByte(%q, 5) = %q, want %q", input, got, "a🙂")
+	}
+}

@@ -71,7 +71,7 @@ func digitsOnly(text string) string {
 }
 
 func maskKeepEdges(text string, prefix, suffix int) string {
-	if len(text) == 0 {
+	if text == "" {
 		return text
 	}
 

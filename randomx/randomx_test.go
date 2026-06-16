@@ -31,6 +31,10 @@ func TestRandomHelpers(t *testing.T) {
 		t.Fatalf("SecRandom = %q, %v", got, err)
 	}
 
+	if got := RandomFromCharset(8, []byte("xy")); len(got) != 8 {
+		t.Fatalf("RandomFromCharset length = %d, want 8", len(got))
+	}
+
 	values := []string{"apple", "banana", "orange"}
 	got := RandomEle(values)
 	if got != "apple" && got != "banana" && got != "orange" {

@@ -8,24 +8,34 @@ import (
 	rand2 "math/rand/v2"
 )
 
-const randIDBytes = 8
+const (
+	randIDBytes = 8
+
+	lowerCaseLettersCharset = "abcdefghijklmnopqrstuvwxyz"
+	upperCaseLettersCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	lettersCharset          = lowerCaseLettersCharset + upperCaseLettersCharset
+	numbersCharset          = "0123456789"
+	alphanumericCharset     = lettersCharset + numbersCharset
+	specialCharset          = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
+	allCharset              = alphanumericCharset + specialCharset
+	hexCharset              = "0123456789abcdef"
+)
 
 var (
 	// LowerCaseLettersCharset 表示全部小写英文字母字符集。
-	LowerCaseLettersCharset = []byte("abcdefghijklmnopqrstuvwxyz")
+	LowerCaseLettersCharset = []byte(lowerCaseLettersCharset)
 	// UpperCaseLettersCharset 表示全部大写英文字母字符集。
-	UpperCaseLettersCharset = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	UpperCaseLettersCharset = []byte(upperCaseLettersCharset)
 	// LettersCharset 表示大小写英文字母字符集。
-	LettersCharset = append(append([]byte(nil), LowerCaseLettersCharset...), UpperCaseLettersCharset...)
+	LettersCharset = []byte(lettersCharset)
 	// NumbersCharset 表示十进制数字字符集。
-	NumbersCharset = []byte("0123456789")
+	NumbersCharset = []byte(numbersCharset)
 	// AlphanumericCharset 表示英文字母与数字混合字符集。
-	AlphanumericCharset = append(append([]byte(nil), LettersCharset...), NumbersCharset...)
+	AlphanumericCharset = []byte(alphanumericCharset)
 	// SpecialCharset 表示常见特殊字符集。
-	SpecialCharset = []byte("!@#$%^&*()_+-=[]{}|;':\",./<>?")
+	SpecialCharset = []byte(specialCharset)
 	// AllCharset 表示当前包支持的全部字符集。
-	AllCharset = append(append([]byte(nil), AlphanumericCharset...), SpecialCharset...)
-	hexCharset = []byte("0123456789abcdef")
+	AllCharset = []byte(allCharset)
 )
 
 // Random 按指定长度和字符集类型生成随机字符串。
@@ -34,27 +44,35 @@ func Random(length int, chartype ...string) string {
 		return ""
 	}
 
-	charset := AlphanumericCharset
+	charset := alphanumericCharset
 	if len(chartype) > 0 {
 		switch chartype[0] {
 		case "l":
-			charset = LowerCaseLettersCharset
+			charset = lowerCaseLettersCharset
 		case "u":
-			charset = UpperCaseLettersCharset
+			charset = upperCaseLettersCharset
 		case "lu":
-			charset = LettersCharset
+			charset = lettersCharset
 		case "n":
-			charset = NumbersCharset
+			charset = numbersCharset
 		case "lun":
-			charset = AlphanumericCharset
+			charset = alphanumericCharset
 		case "sc":
-			charset = SpecialCharset
+			charset = specialCharset
 		case "all":
-			charset = AllCharset
+			charset = allCharset
 		}
 	}
 
 	return randomFromCharset(length, charset)
+}
+
+// RandomFromCharset 使用指定字符集生成随机字符串。
+func RandomFromCharset(length int, charset []byte) string {
+	if length <= 0 || len(charset) == 0 {
+		return ""
+	}
+	return randomFromCharset(length, string(charset))
 }
 
 // SecRandom 使用加密安全随机源生成指定长度的随机字符串。
@@ -63,7 +81,7 @@ func SecRandom(length int) (string, error) {
 		return "", nil
 	}
 
-	byteLen := (length*3 + 3) / 4
+	byteLen := secRandomByteLen(length)
 	b := make([]byte, byteLen)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
@@ -77,17 +95,17 @@ func RandomN(length int) string {
 	if length <= 0 {
 		return ""
 	}
-	return randomFromCharset(length, NumbersCharset)
+	return randomFromCharset(length, numbersCharset)
 }
 
 // RandStr 生成指定长度的随机小写字母字符串。
 func RandStr(length int) string {
-	return randomFromCharset(length, LowerCaseLettersCharset)
+	return randomFromCharset(length, lowerCaseLettersCharset)
 }
 
 // RandStrUpper 生成指定长度的随机大写字母字符串。
 func RandStrUpper(length int) string {
-	return randomFromCharset(length, UpperCaseLettersCharset)
+	return randomFromCharset(length, upperCaseLettersCharset)
 }
 
 // RandId 生成固定 16 个十六进制字符的随机 ID。
@@ -106,7 +124,8 @@ func Randn(length int) string { return RandomN(length) }
 // RandomEle 从切片中随机返回一个元素。
 func RandomEle[T any](slice []T) T {
 	if len(slice) == 0 {
-		return *new(T)
+		var zero T
+		return zero
 	}
 
 	index, err := rand.Int(rand.Reader, big.NewInt(int64(len(slice))))
@@ -117,8 +136,8 @@ func RandomEle[T any](slice []T) T {
 	return slice[index.Int64()]
 }
 
-func randomFromCharset(length int, charset []byte) string {
-	if length <= 0 || len(charset) == 0 {
+func randomFromCharset(length int, charset string) string {
+	if length <= 0 || charset == "" {
 		return ""
 	}
 
@@ -128,4 +147,12 @@ func randomFromCharset(length int, charset []byte) string {
 	}
 
 	return string(b)
+}
+
+func secRandomByteLen(length int) int {
+	byteLen := length / 4 * 3
+	if rem := length % 4; rem > 0 {
+		byteLen += rem
+	}
+	return byteLen
 }

@@ -135,7 +135,7 @@ func toDelimitedCase(s string, separator rune, upper bool) string {
 	pendingSeparator := false
 	lastWasSeparator := false
 
-	for len(s) > 0 {
+	for s != "" {
 		r, size := utf8.DecodeRuneInString(s)
 		if isCaseSeparator(r) {
 			if builder.Len() > 0 {
@@ -151,7 +151,6 @@ func toDelimitedCase(s string, separator rune, upper bool) string {
 
 		if builder.Len() > 0 && (pendingSeparator || shouldInsertDelimiter(prevClass, currClass, nextClass)) && !lastWasSeparator {
 			builder.WriteRune(separator)
-			lastWasSeparator = true
 		}
 
 		if upper {

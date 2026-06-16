@@ -30,7 +30,6 @@ func TestIsEmailStrict(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			if got := IsEmailStrict(tc.in); got != tc.want {
 				t.Fatalf("IsEmailStrict(%q) = %t, want %t", tc.in, got, tc.want)
@@ -175,5 +174,4 @@ func TestValidateStrictAPIs(t *testing.T) {
 	if err := ValidateE164("+8613800138000"); err != nil {
 		t.Fatalf("ValidateE164 returned error: %v", err)
 	}
-
 }
