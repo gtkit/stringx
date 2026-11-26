@@ -201,17 +201,17 @@ linters:
         path: _test\.go
       - linters:
           - cyclop
-        path: validatex/validatex\.go
+        path: validatex/business/phone\.go
         text: normalizeChinaMobilePhone
       - linters:
           - cyclop
           - gocognit
           - nestif
-        path: textx/textx\.go
+        path: textx/translate\.go
         text: NewTranslator|TranslateRune|Squeeze|nextRuneRange
       - linters:
           - nestif
-        path: textx/textx\.go
+        path: textx/translate\.go
         text: if last != utf8\.RuneError
       - linters:
           - revive

@@ -7,13 +7,16 @@
 - `stringx`：兼容层，适合已有项目直接接入
 - `caseconv`：命名风格转换
 - `textx`：通用文本处理
-- `validatex`：严格校验与解析
+- `validatex`：严格协议校验与解析
+- `validatex/business`：业务编号校验和中国身份证解析，仅依赖标准库
 - `randomx`：随机字符串与随机数辅助
 - `inflectx`：英文单复数规则管理
 - `maskx`：脱敏能力
 - `unsafex`：显式 `unsafe` 能力
 
 ## 安装
+
+需要 Go 1.27 或更高版本。
 
 ```bash
 go get github.com/gtkit/stringx
@@ -23,6 +26,7 @@ go get github.com/gtkit/stringx
 
 - 新项目推荐按功能直接引入子包，依赖边界更清晰
 - 旧项目可以继续使用根包 `stringx`，不需要一次性迁移
+- 业务编号校验和中国身份证解析可直接引入 `validatex/business`
 - 脱敏优先用 `maskx`
 - 显式 `unsafe` 能力优先用 `unsafex`
 
@@ -67,14 +71,14 @@ import (
 
 	"github.com/gtkit/stringx/caseconv"
 	"github.com/gtkit/stringx/maskx"
-	"github.com/gtkit/stringx/validatex"
+	"github.com/gtkit/stringx/validatex/business"
 )
 
 func main() {
 	fmt.Println(caseconv.ToKebab("HelloWorld123")) // hello-world-123
 	fmt.Println(maskx.MaskEmail("alice@example.com")) // a***e@example.com
 
-	err := validatex.ValidateChinaMobilePhone("(+86) 138-0013-8000")
+	err := business.ValidateChinaMobilePhone("(+86) 138-0013-8000")
 	fmt.Println(err == nil) // true
 }
 ```
@@ -345,6 +349,8 @@ fmt.Println(stringx.Plural("analysis")) // analyses
 - `func (RNG) Uint64() uint64`
 - `func (RNG) Uint64n(maxN uint64) uint64`：返回 `[0, maxN]` 范围内的随机值。
 
+需要生成 UUID v4 字符串时，可直接使用标准库 `uuid.NewV4().String()`。
+
 ```go
 fmt.Println(stringx.Random(8))         // 随机字母数字
 fmt.Println(stringx.Random(6, "n"))    // 随机数字
@@ -411,21 +417,18 @@ fmt.Println(safeString) // snapshot
 
 ### `validatex`
 
-`validatex` 包含根包同名的严格校验与解析能力，并额外提供一个仅在子包暴露的方法：
+`validatex` 提供支持 IDNA 的邮箱、URL 和主机名校验，以及 IP、UUID、E.164 等协议校验。现有业务校验与解析入口也可继续使用。
 
+### `validatex/business`
+
+直接导入 `github.com/gtkit/stringx/validatex/business` 可使用以下仅依赖标准库的能力。
+
+- `ValidateChinaIDCard`、`IsChinaIDCard` 和 `ParseChinaIDCard`
+- `ValidateChinaUSCC` 和 `IsChinaUSCC`
+- `ValidateBankCard` 和 `IsBankCard`
 - `ValidateChinaMobilePhone(text string) error`
 
-这个方法使用本地规则严格校验中国手机号：
-
-- 允许 `+86` / `86` 前缀
-- 允许空格、连字符、圆括号作为格式化字符
-- 标准化后必须是 11 位手机号码
-- 会进一步校验常见手机号段前缀
-
-```go
-err := validatex.ValidateChinaMobilePhone("(+86) 138-0013-8000")
-fmt.Println(err == nil) // true
-```
+`ParseChinaIDCard` 在此子包返回 `ChinaIDCardInfo` 值和 `error`。手机号校验接受 `+86` 或 `86` 前缀，以及空格、连字符和圆括号，并检查标准化后的 11 位号码和号段。
 
 ### `randomx`
 
@@ -440,6 +443,8 @@ fmt.Println(err == nil) // true
 - `RandId`
 - `Randn`
 - `RandomEle`
+- `RandInt`、`RUint` 和 `RandIntHandler`
+- `RNG` 及其 `Uint32`、`Uint32n`、`Uint64` 和 `Uint64n` 方法
 
 ### `inflectx`
 
@@ -472,7 +477,7 @@ fmt.Println(err == nil) // true
 
 - 只需要轻量格式判断时，用 `IsEmail`、`IsPhone`
 - 需要协议级校验和错误信息时，用 `Validate*` 或 `IsEmailStrict`、`IsHTTPURL` 等严格方法
-- 需要结构化业务解析时，用 `ParseChinaIDCard`
+- 需要结构化业务解析时，用 `business.ParseChinaIDCard`
 - 需要脱敏时，优先直接引入 `maskx`
 - 需要复用字符映射规则时，优先用 `NewTranslator`
 - 需要零拷贝能力时，优先显式引入 `unsafex`

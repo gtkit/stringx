@@ -90,6 +90,10 @@ func TestValidateAndParse(t *testing.T) {
 	if info.Age != 76 {
 		t.Fatalf("Age = %d, want 76", info.Age)
 	}
+
+	if info.Number != "11010519491231002X" || info.ProvinceCode != "11" {
+		t.Fatalf("ParseChinaIDCard returned number %q and province %q", info.Number, info.ProvinceCode)
+	}
 }
 
 func TestValidateChinaMobilePhoneFormattingRules(t *testing.T) {
@@ -98,6 +102,7 @@ func TestValidateChinaMobilePhoneFormattingRules(t *testing.T) {
 		"+86 138 0013 8000",
 		"86-138-0013-8000",
 		"(+86) 138-0013-8000",
+		"(86) 138-0013-8000",
 	}
 
 	for _, input := range validCases {

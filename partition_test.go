@@ -15,6 +15,11 @@ func TestPartition(t *testing.T) {
 	if head != "hello" || match != "" || tail != "" {
 		t.Fatalf("Partition(%q, %q) = (%q, %q, %q)", "hello", "x", head, match, tail)
 	}
+
+	head, match, tail = Partition("你好", "")
+	if head != "" || match != "" || tail != "你好" {
+		t.Fatalf("Partition(%q, %q) = (%q, %q, %q)", "你好", "", head, match, tail)
+	}
 }
 
 func TestLastPartition(t *testing.T) {
@@ -26,6 +31,11 @@ func TestLastPartition(t *testing.T) {
 	head, match, tail = LastPartition("hello", "x")
 	if head != "" || match != "" || tail != "hello" {
 		t.Fatalf("LastPartition(%q, %q) = (%q, %q, %q)", "hello", "x", head, match, tail)
+	}
+
+	head, match, tail = LastPartition("你好", "")
+	if head != "你好" || match != "" || tail != "" {
+		t.Fatalf("LastPartition(%q, %q) = (%q, %q, %q)", "你好", "", head, match, tail)
 	}
 }
 

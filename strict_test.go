@@ -25,7 +25,10 @@ func TestIsEmailStrict(t *testing.T) {
 		{name: "display name not allowed", in: `Alice <alice@example.com>`, want: false},
 		{name: "domain literal ipv4", in: "user@[127.0.0.1]", want: true},
 		{name: "domain literal ipv6", in: "user@[IPv6:2001:db8::1]", want: true},
+		{name: "missing separator", in: "example.com", want: false},
+		{name: "missing local part", in: "@example.com", want: false},
 		{name: "missing domain", in: "user@", want: false},
+		{name: "multiple separators", in: "user@@example.com", want: false},
 		{name: "invalid domain", in: "user@-example.com", want: false},
 	}
 
